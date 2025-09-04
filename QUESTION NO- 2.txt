@@ -1,0 +1,66 @@
+QUESTION NO:- 2
+
+
+
+import os
+import pandas as pd
+
+def load_all_csv_files(folder):
+    """Load all CSV files from the folder into a single DataFrame."""
+    dataframes = []
+    for file in os.listdir(folder):
+        if file.endswith(".csv"):
+            path = os.path.join(folder, file)
+            df = pd.read_csv(path)
+            df["Station"] = file.replace(".csv", "")  # station name from filename
+            dataframes.append(df)
+    return pd.concat(dataframes, ignore_index=True)
+
+
+def calculate_season(month):
+    """Map month (1-12) to Australian seasons."""
+    if month in [12, 1, 2]:
+        return "Summer"
+    elif month in [3, 4, 5]:
+        return "Autumn"
+    elif month in [6, 7, 8]:
+        return "Winter"
+    else:
+        return "Spring"
+
+
+def calculate_seasonal_average(df):
+    """Calculate average temperature for each season across all years & stations."""
+    df["Season"] = df["Month"].apply(calculate_season)
+    seasonal_avg = df.groupby("Season")["Temperature"].mean().round(2)
+    
+    with open("average_temp.txt", "w") as f:
+        for season, avg in seasonal_avg.items():
+            f.write(f"{season}: {avg}°C\n")
+
+
+def find_largest_temp_range(df):
+    """Find station(s) with the largest temperature range."""
+    station_ranges = df.groupby("Station")["Temperature"].agg(lambda x: x.max() - x.min())
+    max_range = station_ranges.max()
+    largest_stations = station_ranges[station_ranges == max_range]
+    
+    with open("largest_range.txt", "w") as f:
+        for station, rng in largest_stations.items():
+            f.write(f"{station}: {rng:.2f}°C\n")
+
+
+def main():
+    folder = "temperatures"
+    df = load_all_csv_files(folder)
+
+    # Drop rows with missing values
+    df = df.dropna(subset=["Temperature", "Month"])
+
+    calculate_seasonal_average(df)
+    find_largest_temp_range(df)
+    print("Results saved to average_temp.txt and largest_range.txt")
+
+
+if __name__ == "__main__":
+    main()
